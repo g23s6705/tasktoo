@@ -7,11 +7,12 @@ import org.w3c.dom.NodeList;
 import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.List;
 
-public class XMLToJsonConverter {
+public class XMLToJsonConverterWithValidation {
     public static void main(String[] args) {
         try {
             File inputFile = new File("data.xml"); // Replace "data.xml" with your actual file name
@@ -21,9 +22,19 @@ public class XMLToJsonConverter {
             doc.getDocumentElement().normalize();
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            List<String> availableFields = getAvailableFields(doc); // Get available fields from the XML
+
+            System.out.println("Available fields: " + availableFields);
             System.out.print("Enter the fields to display (comma-separated): ");
             String selectedFieldsInput = reader.readLine();
             List<String> selectedFields = Arrays.asList(selectedFieldsInput.split(",\\s*"));
+
+            // Validate user input
+            for (String field : selectedFields) {
+                if (!availableFields.contains(field.trim())) {
+                    System.out.println("Warning: Field '" + field.trim() + "' not found in the XML.");
+                }
+            }
 
             NodeList recordList = doc.getElementsByTagName("record");
 
@@ -40,12 +51,30 @@ public class XMLToJsonConverter {
                         }
                     }
                 }
-                System.out.println(jsonRecord.toString(2)); // Use toString(2) for pretty printing
+                System.out.println(jsonRecord.toString(2));
             }
             reader.close();
 
+        } catch (IOException e) {
+            System.err.println("Error reading input: " + e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("An error occurred during XML processing: " + e.getMessage());
         }
+    }
+
+    // Helper function to get all available field names from the first record
+    private static List<String> getAvailableFields(Document doc) {
+        List<String> fields = new java.util.ArrayList<>();
+        NodeList recordList = doc.getElementsByTagName("record");
+        if (recordList.getLength() > 0) {
+            Element firstRecord = (Element) recordList.item(0);
+            NodeList childNodes = firstRecord.getChildNodes();
+            for (int i = 0; i < childNodes.getLength(); i++) {
+                if (childNodes.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
+                    fields.add(((Element) childNodes.item(i)).getTagName());
+                }
+            }
+        }
+        return fields;
     }
 }
